@@ -155,3 +155,26 @@ func Query[T any](ctx context.Context, db query.Database, builder QueryBuilder, 
 
 	return results, nil
 }
+
+func DerivedQuery[T any](ctx context.Context, db query.Database, builder QueryBuilder, cb func(row Scanner) (T, error)) ([]T, error) {
+	results := make([]T, 0)
+
+	sqlStr, args := builder.ResolveDerivedQuery()
+	rows, err := db.QueryContext(ctx, sqlStr, args...)
+	if err != nil {
+		return results, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		r, err := cb(rows)
+		if err != nil {
+			return results, err
+		}
+
+		results = append(results, r)
+	}
+
+	return results, nil
+}
