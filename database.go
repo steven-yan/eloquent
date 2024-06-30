@@ -65,6 +65,29 @@ func (db *databaseImpl) Query(ctx context.Context, builder QueryBuilder, cb func
 	return results, nil
 }
 
+func (db *databaseImpl) DerivedQuery(ctx context.Context, builder QueryBuilder, cb func(row Scanner) (any, error)) ([]any, error) {
+	results := make([]any, 0)
+
+	sqlStr, args := builder.ResolveDerivedQuery()
+	rows, err := db.db.QueryContext(ctx, sqlStr, args...)
+	if err != nil {
+		return results, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		r, err := cb(rows)
+		if err != nil {
+			return results, err
+		}
+
+		results = append(results, r)
+	}
+
+	return results, nil
+}
+
 // Insert to execute an insert statement
 func (db *databaseImpl) Insert(ctx context.Context, tableName string, kv query.KV) (int64, error) {
 	sqlStr, args := query.Builder().Table(tableName).ResolveInsert(kv)
