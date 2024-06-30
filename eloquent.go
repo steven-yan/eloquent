@@ -16,6 +16,7 @@ type Database interface {
 
 type QueryBuilder interface {
 	ResolveQuery() (sqlStr string, args []any)
+	ResolveDerivedQuery() (sqlStr string, args []any)
 }
 
 // Scanner is an interface which wraps sql.Rows's Scan method

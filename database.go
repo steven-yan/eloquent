@@ -37,6 +37,10 @@ func (r *rawQueryBuilder) ResolveQuery() (sqlStr string, args []any) {
 	return r.sql, r.args
 }
 
+func (r *rawQueryBuilder) ResolveDerivedQuery() (sqlStr string, args []any) {
+	return r.ResolveQuery()
+}
+
 // Query run a basic query
 func (db *databaseImpl) Query(ctx context.Context, builder QueryBuilder, cb func(row Scanner) (any, error)) ([]any, error) {
 	results := make([]any, 0)

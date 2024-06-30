@@ -297,6 +297,71 @@ func (builder SQLBuilder) ResolveQuery() (string, []interface{}) {
 	return sqlStr, params
 }
 
+func (builder SQLBuilder) ResolveDerivedQuery() (string, []interface{}) {
+	tableAlias := resolveTableAlias(builder.tableName)
+
+	params := make([]interface{}, 0)
+
+	fields, p := builder.getFields(tableAlias)
+	params = append(params, p...)
+	sqlStr := fmt.Sprintf("SELECT %s", fields, builder.tableName)
+
+	if len(builder.joins) > 0 {
+		for _, j := range builder.joins {
+			s, p := j.String(tableAlias)
+			sqlStr += " " + s
+			params = append(params, p...)
+		}
+	}
+
+	if !builder.conditions.Empty() {
+		conditions, p := builder.conditions.Resolve(tableAlias)
+		sqlStr += fmt.Sprintf(" WHERE %s", strings.TrimLeft(conditions, " "))
+		params = append(params, p...)
+	}
+
+	if len(builder.groups) > 0 {
+		var groupBys = make([]string, len(builder.groups))
+		for i, g := range builder.groups {
+			groupBys[i] = replaceTableField(tableAlias, g)
+		}
+		sqlStr += fmt.Sprintf(" GROUP BY %s", strings.Join(groupBys, ", "))
+	}
+
+	if builder.having != nil {
+		newBuilder := ConditionBuilder()
+		builder.having(newBuilder)
+
+		havingCond, havingParams := newBuilder.Resolve(tableAlias)
+		if havingCond != "" {
+			sqlStr += fmt.Sprintf(" HAVING %s", havingCond)
+			params = append(params, havingParams...)
+		}
+	}
+
+	if len(builder.orders) > 0 {
+		sqlStr += fmt.Sprintf(" ORDER BY %s", builder.orders.String(tableAlias))
+	}
+
+	if builder.limit >= 0 {
+		sqlStr += fmt.Sprintf(" LIMIT %d", builder.limit)
+	}
+	if builder.offset >= 0 {
+		sqlStr += fmt.Sprintf(" OFFSET %d", builder.offset)
+	}
+
+	if len(builder.unions) > 0 {
+		sqlStr = "(" + sqlStr + ")"
+		for _, u := range builder.unions {
+			s, p := u.SubQuery.ResolveQuery()
+			sqlStr += fmt.Sprintf(" UNION %s (%s)", u.Type, s)
+			params = append(params, p...)
+		}
+	}
+
+	return sqlStr, params
+}
+
 // GetFields return all fields for query
 func (builder SQLBuilder) GetFields() []Expr {
 	return builder.fields
