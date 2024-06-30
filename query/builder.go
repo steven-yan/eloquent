@@ -304,7 +304,7 @@ func (builder SQLBuilder) ResolveDerivedQuery() (string, []interface{}) {
 
 	fields, p := builder.getFields(tableAlias)
 	params = append(params, p...)
-	sqlStr := fmt.Sprintf("SELECT %s", fields, builder.tableName)
+	sqlStr := fmt.Sprintf("SELECT %s", fields)
 
 	if len(builder.joins) > 0 {
 		for _, j := range builder.joins {
